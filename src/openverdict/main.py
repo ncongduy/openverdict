@@ -1,5 +1,6 @@
 """FastAPI application factory."""
 
+import logging
 import time
 import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
@@ -14,6 +15,8 @@ from openverdict.controllers import health, jobs, overrides, url_checks
 from openverdict.logs import request_id_var
 from openverdict.metrics import HTTP_DURATION
 from openverdict.resources import build_resources
+
+log = logging.getLogger(__name__)
 
 MAX_BODY_BYTES = 25 * 1024 * 1024
 
@@ -62,6 +65,9 @@ async def _observe(
     start = time.perf_counter()
     try:
         response = await call_next(request)
+    except Exception as exc:  # noqa: BLE001 - answer and count it, so 5xx shows on the dashboard
+        log.error("unhandled error", extra={"error": type(exc).__name__})
+        response = JSONResponse({"detail": "internal_error"}, status_code=500)
     finally:
         request_id_var.reset(token)
     route = getattr(request.scope.get("route"), "path", "unmatched")
