@@ -10,6 +10,7 @@ from typing import Protocol
 from redis.exceptions import RedisError
 
 from openverdict.detectors.url.base import UrlDetector
+from openverdict.logs import url_fingerprint
 from openverdict.metrics import CACHE_REQUESTS, DETECTOR_DURATION, DETECTOR_FAILURES, URL_VERDICTS
 from openverdict.models.overrides import OverrideMatch
 from openverdict.models.url import NormalizedUrl, UrlError, normalize_url
@@ -128,6 +129,9 @@ class UrlPipeline:
         for url, url_findings in zip(misses, findings, strict=True):
             verdict = combine(url_findings)
             decisions[url.url] = _Decision(verdict, url_findings, checked_at, degraded)
+            if verdict is Verdict.MALICIOUS:
+                detectors = [f.detector for f in url_findings if f.verdict is Verdict.MALICIOUS]
+                log.info("malicious url", extra={**url_fingerprint(url), "detectors": detectors})
             if not degraded:
                 to_cache.append((url, CachedVerdict(verdict, url_findings, checked_at)))
         if version is not None:

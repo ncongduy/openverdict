@@ -4,7 +4,10 @@ import argparse
 import asyncio
 import sys
 
+import uvicorn
+
 from openverdict.config import Settings
+from openverdict.logs import configure_logging
 from openverdict.models.api_keys import ApiKeyRepo, KeyNameTaken, Role
 from openverdict.models.db import create_engine, create_sessionmaker, run_migrations
 
@@ -12,6 +15,7 @@ from openverdict.models.db import create_engine, create_sessionmaker, run_migrat
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="openverdict")
     commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("api", help="run the HTTP API")
     commands.add_parser("migrate", help="upgrade the database schema")
     create = commands.add_parser("create-key", help="create an API key and print it once")
     create.add_argument("--name", required=True)
@@ -53,6 +57,17 @@ def main(argv: list[str] | None = None) -> int:
         return exc.code if isinstance(exc.code, int) else 1
     settings = Settings()
     match args.command:
+        case "api":
+            configure_logging(settings.log_level)
+            uvicorn.run(
+                "openverdict.main:create_app",
+                factory=True,
+                host=settings.api_host,
+                port=settings.api_port,
+                log_config=None,
+                access_log=False,
+            )
+            return 0
         case "migrate":
             run_migrations(settings.database_url)
             return 0

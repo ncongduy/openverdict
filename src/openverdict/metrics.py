@@ -37,3 +37,8 @@ DETECTOR_FAILURES = Counter(
     "Detector batches that timed out or raised.",
     ["detector", "reason"],
 )
+HTTP_DURATION = Histogram(
+    "openverdict_http_request_duration_seconds",
+    "HTTP request latency by method, route template and status.",
+    ["method", "route", "status"],
+)
