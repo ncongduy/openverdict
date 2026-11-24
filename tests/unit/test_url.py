@@ -68,3 +68,22 @@ def test_host_suffixes():
     assert host_suffixes("a.b.example.com") == ["a.b.example.com", "b.example.com", "example.com"]
     assert host_suffixes("example.com") == ["example.com"]
     assert host_suffixes("192.0.2.1") == ["192.0.2.1"]
+
+
+def test_idna_deviation_characters_follow_browsers():
+    # Browsers use UTS-46 non-transitional: ß and ς are kept, not mapped to ss / σ.
+    n = normalize_url("https://meßenger.com/login")
+    assert n.host == "xn--meenger-1va.com" and n.host_unicode == "meßenger.com"
+    assert normalize_url("https://xn--meenger-1va.com/").host_unicode == "meßenger.com"
+    assert normalize_url("http://αβς.test/").host_unicode == "αβς.test"
+    assert normalize_domain("meßenger.com") == "xn--meenger-1va.com"
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["http://a.test/x\x00y", "http://a.test/\x07", "http://a.test/\x7f", "http://a.test/\ufffd"],
+)
+def test_control_characters_are_invalid(raw):
+    with pytest.raises(UrlError) as exc:
+        normalize_url(raw)
+    assert exc.value.code == "invalid_url"

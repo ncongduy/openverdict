@@ -54,3 +54,10 @@ async def test_no_url_in_logs_and_request_id(api, client_key, caplog):
     assert r.headers["X-Request-ID"] == "req-1"
     dumped = caplog.text + "".join(str(vars(rec)) for rec in caplog.records)
     assert "secret-reset-token-123" not in dumped
+
+
+async def test_control_character_item_does_not_fail_batch(api, client_key):
+    urls = ["http://ok.test/", "http://a.test/x\u0000y"]
+    r = await api.post(URL, headers={"X-API-Key": client_key}, json={"urls": urls})
+    assert r.status_code == 200
+    assert [x["error"] for x in r.json()["results"]] == [None, "invalid_url"]

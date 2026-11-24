@@ -61,9 +61,14 @@ class JobRepo:
             )
             session.add(row)
             await session.flush()
+            # Postgres text cannot hold NUL. U+FFFD keeps the item, and normalization rejects
+            # it as invalid_url, so the item still gets its per-item error.
             await session.execute(
                 insert(_ITEMS),
-                [{"job_id": job_id, "idx": i, "url": url} for i, url in enumerate(urls)],
+                [
+                    {"job_id": job_id, "idx": i, "url": url.replace("\x00", "�")}
+                    for i, url in enumerate(urls)
+                ],
             )
             await session.refresh(row)
         return _record(row)

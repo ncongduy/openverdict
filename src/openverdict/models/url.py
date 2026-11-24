@@ -7,10 +7,15 @@ from dataclasses import dataclass
 from typing import Literal
 from urllib.parse import urlsplit, urlunsplit
 
+import idna
+
 MAX_URL_LENGTH = 2048
 ALLOWED_SCHEMES = frozenset({"http", "https"})
 DEFAULT_PORTS = {"http": 80, "https": 443}
 _LABEL = re.compile(r"^[a-z0-9_-]{1,63}$")
+# Control characters, DEL and U+FFFD (the replacement for undecodable input) never belong in
+# a URL; Postgres also cannot store NUL in text columns.
+_FORBIDDEN = re.compile(r"[\x00-\x1f\x7f�]")
 
 ErrorCode = Literal["invalid_url", "unsupported_scheme", "too_long"]
 
@@ -45,27 +50,43 @@ def _ip_literal(host: str) -> str | None:
 
 
 def _normalize_host(raw_host: str) -> tuple[str, str]:
-    """Return (ascii_host, unicode_host) or raise UrlError('invalid_url')."""
-    host = raw_host.strip().lower().rstrip(".")
+    """Return (ascii_host, unicode_host) or raise UrlError('invalid_url').
+
+    Uses UTS-46 non-transitional processing, like current browsers: ß and ς are kept
+    (xn--...), not folded to ss / σ, so the engine judges the host a browser would visit.
+    """
+    host = raw_host.strip().rstrip(".")
     if not host:
         raise UrlError("invalid_url")
-    ip = _ip_literal(host)
+    ip = _ip_literal(host.lower())
     if ip is not None:
         return ip, ip
+    ascii_labels: list[str] = []
+    unicode_labels: list[str] = []
     try:
-        ascii_host = host.encode("idna").decode("ascii")
-        unicode_host = ascii_host.encode("ascii").decode("idna")
-    except UnicodeError as exc:
+        mapped = idna.uts46_remap(host, std3_rules=False, transitional=False)
+        for label in mapped.split("."):
+            if label.isascii():
+                ascii_label = label
+                unicode_label = idna.decode(label) if label.startswith("xn--") else label
+            else:
+                ascii_label = idna.encode(label).decode("ascii")
+                unicode_label = label
+            if not _LABEL.match(ascii_label):
+                raise UrlError("invalid_url")
+            ascii_labels.append(ascii_label)
+            unicode_labels.append(unicode_label)
+    except (idna.IDNAError, UnicodeError) as exc:
         raise UrlError("invalid_url") from exc
-    if not all(_LABEL.match(label) for label in ascii_host.split(".")):
-        raise UrlError("invalid_url")
-    return ascii_host, unicode_host
+    return ".".join(ascii_labels), ".".join(unicode_labels)
 
 
 def normalize_url(raw: str) -> NormalizedUrl:
     text = raw.strip()
     if len(text) > MAX_URL_LENGTH:
         raise UrlError("too_long")
+    if _FORBIDDEN.search(text):
+        raise UrlError("invalid_url")
     try:
         parts = urlsplit(text)
     except ValueError as exc:

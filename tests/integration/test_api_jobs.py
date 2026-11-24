@@ -41,3 +41,10 @@ async def test_enqueue_failure_still_accepted(api, client_key, monkeypatch):
     h = {"X-API-Key": client_key}
     r = await api.post("/v1/jobs", headers=h, json={"urls": ["http://a.test/"]})
     assert r.status_code == 202
+
+
+async def test_job_with_nul_url_is_accepted(api, client_key):
+    h = {"X-API-Key": client_key}
+    body = {"urls": ["http://ok.test/", "http://a.test/x\u0000y"]}
+    r = await api.post("/v1/jobs", headers=h, json=body)
+    assert r.status_code == 202 and r.json()["total"] == 2
