@@ -1,0 +1,3 @@
+phish-domain.test
+Bücher-Phish.test
+not a domain!

@@ -1,0 +1,9 @@
+################################################################
+# abuse.ch URLhaus Database Dump (CSV - recent URLs)           #
+################################################################
+#
+# id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
+"3301001","2026-11-20 10:01:02","http://malware-drop.test/payload.exe","online","2026-11-20 10:01:02","malware_download","exe","https://urlhaus.abuse.ch/url/3301001/","anonymous"
+"3301002","2026-11-19 08:00:00","http://bad-host.test/a.exe","offline","","malware_download","elf","https://urlhaus.abuse.ch/url/3301002/","anonymous"
+"3301003","2026-11-18 08:00:00","ftp://ftp-only.test/x","online","","malware_download","","https://urlhaus.abuse.ch/url/3301003/","anonymous"
+"broken-row"
