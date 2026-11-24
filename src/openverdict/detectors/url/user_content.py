@@ -1,4 +1,5 @@
-"""Hosts where anyone can publish content: never allowlisted, never host-level feed matches."""
+"""Hosts where anyone can publish content or redirects: never allowlisted, never host-level
+feed matches. Their popularity says nothing about a particular link."""
 
 from openverdict.models.url import host_suffixes
 
@@ -46,6 +47,23 @@ USER_CONTENT_HOSTS = frozenset(
         "ngrok.io",
         "trycloudflare.com",
         "ipfs.io",
+        "firebasestorage.googleapis.com",
+        "script.google.com",
+        "script.googleusercontent.com",
+        "translate.goog",
+        # URL shorteners and link hubs: the destination is unknown without following them.
+        "bit.ly",
+        "t.co",
+        "tinyurl.com",
+        "goo.gl",
+        "ow.ly",
+        "is.gd",
+        "cutt.ly",
+        "rebrand.ly",
+        "lnkd.in",
+        "linktr.ee",
+        "rb.gy",
+        "shorturl.at",
     }
 )
 
