@@ -42,3 +42,8 @@ HTTP_DURATION = Histogram(
     "HTTP request latency by method, route template and status.",
     ["method", "route", "status"],
 )
+OVERRIDE_OUTCOMES = Counter(
+    "openverdict_override_outcomes_total",
+    "Analyst overrides by how they relate to the engine verdict.",
+    ["outcome"],
+)

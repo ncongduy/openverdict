@@ -18,6 +18,7 @@ from openverdict.models.api_keys import ApiKeyRepo
 from openverdict.models.db import create_engine, create_sessionmaker
 from openverdict.models.overrides import OverrideRepo
 from openverdict.services.cache import VerdictCache
+from openverdict.services.overrides import OverrideService
 from openverdict.services.pipeline import UrlPipeline
 
 log = logging.getLogger(__name__)
@@ -35,6 +36,7 @@ class Resources:
     keys: ApiKeyRepo
     overrides: OverrideRepo
     pipeline: UrlPipeline
+    override_service: OverrideService
 
     async def aclose(self) -> None:
         await self.http.aclose()
@@ -85,4 +87,5 @@ async def build_resources(settings: Settings) -> Resources:
         keys=ApiKeyRepo(db),
         overrides=overrides,
         pipeline=pipeline,
+        override_service=OverrideService(overrides, pipeline, cache),
     )

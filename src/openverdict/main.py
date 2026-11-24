@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
 from openverdict.config import Settings
-from openverdict.controllers import health, url_checks
+from openverdict.controllers import health, overrides, url_checks
 from openverdict.logs import request_id_var
 from openverdict.metrics import HTTP_DURATION
 from openverdict.resources import build_resources
@@ -56,4 +56,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.middleware("http")(_observe)
     app.include_router(health.router)
     app.include_router(url_checks.router)
+    app.include_router(overrides.router)
     return app
