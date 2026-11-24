@@ -27,7 +27,7 @@ class OverrideView(BaseModel):
     created_at: datetime
 
     @classmethod
-    def of(cls, record: OverrideRecord) -> "OverrideView":
+    def of(cls, record: OverrideRecord) -> OverrideView:
         return cls(
             id=record.id,
             target_type=record.target_type.value,
@@ -51,7 +51,7 @@ class AuditEntryView(BaseModel):
     at: datetime
 
     @classmethod
-    def of(cls, record: AuditRecord) -> "AuditEntryView":
+    def of(cls, record: AuditRecord) -> AuditEntryView:
         return cls(
             id=record.id,
             actor=record.actor,
