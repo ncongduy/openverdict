@@ -101,3 +101,16 @@ async def test_sync_due(syncer, feed_store):
     await syncer.sync_due(now=1_000_010.0)
     assert await feed_store.synced_at(URLHAUS) is not None
     assert not tranco.called
+
+
+@respx.mock
+async def test_failed_feed_waits_before_retrying(syncer, feed_store):
+    # A broken key or a down mirror must not be hammered every scheduler tick (15 s).
+    route = respx.get(URLHAUS_URL).respond(500)
+    for other in (PHISHING_DB, ALLOWLIST):
+        await feed_store.mark_synced(other, 1_000_000.0)
+    await syncer.sync_due(now=1_000_000.0)
+    await syncer.sync_due(now=1_000_015.0)
+    assert route.call_count == 1
+    await syncer.sync_due(now=1_000_301.0)
+    assert route.call_count == 2

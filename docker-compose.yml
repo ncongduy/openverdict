@@ -93,6 +93,14 @@ services:
   worker:
     <<: *openverdict-app
     command: ["worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      valkey:
+        condition: service_healthy
+      demo-feeds:  # only with the demo profile: lets the first feed sync succeed at once
+        condition: service_started
+        required: false
     # Metrics on :9100 are scraped by Prometheus inside the compose network (not published:
     # host port 9100 is usually taken by node_exporter).
 

@@ -82,3 +82,10 @@ class FeedStore:
     async def synced_at(self, feed: str) -> float | None:
         value = await self._valkey.get(f"feed:{feed}:synced_at")
         return None if value is None else float(value)
+
+    async def mark_attempted(self, feed: str, at: float) -> None:
+        await self._valkey.set(f"feed:{feed}:attempted_at", repr(at))
+
+    async def attempted_at(self, feed: str) -> float | None:
+        value = await self._valkey.get(f"feed:{feed}:attempted_at")
+        return None if value is None else float(value)

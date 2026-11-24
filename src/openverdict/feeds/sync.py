@@ -27,6 +27,7 @@ for _noisy in ("httpx", "httpcore"):
     logging.getLogger(_noisy).setLevel(logging.WARNING)
 
 LOCK_TTL_SECONDS = 600
+RETRY_SECONDS = 300
 
 Fetch = Callable[[httpx.AsyncClient], Awaitable[ParsedFeed]]
 
@@ -132,5 +133,12 @@ class FeedSyncer:
     async def sync_due(self, now: float) -> None:
         for source in self.sources:
             last = await self._store.synced_at(source.name)
-            if last is None or now - last >= source.interval_seconds:
-                await self.sync(source)
+            if last is not None and now - last < source.interval_seconds:
+                continue
+            # After a failure, wait before retrying: never hammer a feed every tick.
+            attempted = await self._store.attempted_at(source.name)
+            retry_after = min(source.interval_seconds, RETRY_SECONDS)
+            if attempted is not None and now - attempted < retry_after:
+                continue
+            await self._store.mark_attempted(source.name, now)
+            await self.sync(source)
