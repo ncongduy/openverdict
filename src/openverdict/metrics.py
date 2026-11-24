@@ -1,6 +1,6 @@
 """All Prometheus metrics, registered once in the default registry."""
 
-from prometheus_client import Counter, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 FEED_LAST_SUCCESS = Gauge(
     "openverdict_feed_last_success_timestamp_seconds",
@@ -16,4 +16,24 @@ FEED_SYNC_FAILURES = Counter(
     "openverdict_feed_sync_failures_total",
     "Feed syncs that failed and kept the previous version.",
     ["feed"],
+)
+URL_VERDICTS = Counter(
+    "openverdict_url_verdicts_total",
+    "URL verdicts returned, by verdict (invalid = per-item error).",
+    ["verdict"],
+)
+CACHE_REQUESTS = Counter(
+    "openverdict_cache_requests_total",
+    "Verdict cache lookups by result.",
+    ["result"],
+)
+DETECTOR_DURATION = Histogram(
+    "openverdict_detector_duration_seconds",
+    "Time one detector took for one batch.",
+    ["detector"],
+)
+DETECTOR_FAILURES = Counter(
+    "openverdict_detector_failures_total",
+    "Detector batches that timed out or raised.",
+    ["detector", "reason"],
 )
