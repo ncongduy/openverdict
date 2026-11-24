@@ -1,0 +1,8 @@
+################################################################
+# openverdict demo feed — synthetic data in URLhaus CSV format #
+# Reserved test names only (RFC 2606 / RFC 6761).               #
+################################################################
+#
+# id,dateadded,url,url_status,last_online,threat,tags,urlhaus_link,reporter
+"1000001","2026-11-20 10:00:00","http://malware-drop.test/payload.exe","online","2026-11-20 10:00:00","malware_download","exe","https://urlhaus.abuse.ch/url/1000001/","demo"
+"1000002","2026-11-19 08:00:00","http://bad-host.test/a.exe","online","2026-11-19 08:00:00","malware_download","elf","https://urlhaus.abuse.ch/url/1000002/","demo"
