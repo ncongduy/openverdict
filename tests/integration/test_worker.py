@@ -118,3 +118,14 @@ async def test_scheduler_cadence(env, valkey, feed_store, settings):
     assert syncer.calls == [1000.0, 1015.0, 1075.0]
     # Sweeps every 60 s (ran at 1000 and 1075, skipped 1015); cleanup hourly (only 1000).
     assert sched.last_sweep == 1075.0 and sched.last_cleanup == 1000.0
+
+
+async def test_recovers_when_consumer_group_is_missing(resources, db, valkey, published_feeds):
+    # Valkey lost its data (or never had the group): the stream exists, the group does not.
+    owner, _ = await ApiKeyRepo(db).create("owner", Role.CLIENT)
+    repo = JobRepo(db)
+    job = await JobService(repo, valkey).submit(owner, URLS[:3])
+    consumer = JobConsumer(valkey, repo, resources.pipeline, "fresh", 300_000)
+    handled = await consumer.run_once(block_ms=100) + await consumer.run_once(block_ms=100)
+    assert handled == 1
+    assert (await repo.get(job.id)).status is JobStatus.DONE
