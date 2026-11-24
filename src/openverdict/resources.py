@@ -16,8 +16,10 @@ from openverdict.detectors.url.safe_browsing import SafeBrowsingDetector
 from openverdict.feeds.store import PHISHING_DB, URLHAUS, FeedStore
 from openverdict.models.api_keys import ApiKeyRepo
 from openverdict.models.db import create_engine, create_sessionmaker
+from openverdict.models.jobs import JobRepo
 from openverdict.models.overrides import OverrideRepo
 from openverdict.services.cache import VerdictCache
+from openverdict.services.jobs import JobService
 from openverdict.services.overrides import OverrideService
 from openverdict.services.pipeline import UrlPipeline
 
@@ -37,6 +39,8 @@ class Resources:
     overrides: OverrideRepo
     pipeline: UrlPipeline
     override_service: OverrideService
+    job_repo: JobRepo
+    jobs: JobService
 
     async def aclose(self) -> None:
         await self.http.aclose()
@@ -70,6 +74,7 @@ async def build_resources(settings: Settings) -> Resources:
     feed_store = FeedStore(valkey)
     cache = VerdictCache(valkey, settings.cache_ttl_seconds)
     overrides = OverrideRepo(db)
+    job_repo = JobRepo(db)
     pipeline = UrlPipeline(
         build_detectors(settings, feed_store, http),
         cache,
@@ -88,4 +93,6 @@ async def build_resources(settings: Settings) -> Resources:
         overrides=overrides,
         pipeline=pipeline,
         override_service=OverrideService(overrides, pipeline, cache),
+        job_repo=job_repo,
+        jobs=JobService(job_repo, valkey),
     )
