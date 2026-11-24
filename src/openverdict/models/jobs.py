@@ -160,6 +160,15 @@ class JobRepo:
         async with self._db() as session:
             return list((await session.execute(query)).scalars())
 
+    async def touch(self, job_ids: Sequence[uuid.UUID]) -> None:
+        """Mark jobs as recently handled so the sweeper does not re-enqueue them every tick."""
+        if not job_ids:
+            return
+        async with self._db() as session, session.begin():
+            await session.execute(
+                update(JobRow).where(JobRow.id.in_(job_ids)).values(updated_at=func.now())
+            )
+
     async def delete_older_than(self, cutoff: datetime) -> int:
         """Retention: remove jobs (and, by cascade, their items) created before the cutoff."""
         async with self._db() as session, session.begin():

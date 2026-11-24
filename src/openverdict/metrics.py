@@ -47,3 +47,17 @@ OVERRIDE_OUTCOMES = Counter(
     "Analyst overrides by how they relate to the engine verdict.",
     ["outcome"],
 )
+JOB_QUEUE_DEPTH = Gauge(
+    "openverdict_job_queue_depth",
+    "Job messages waiting in the stream or delivered but not yet acknowledged.",
+)
+JOB_DURATION = Histogram(
+    "openverdict_job_duration_seconds",
+    "Wall time to process one job.",
+    buckets=(1, 5, 15, 30, 60, 120, 300, 600, 1800),
+)
+JOBS_TOTAL = Counter(
+    "openverdict_jobs_total",
+    "Jobs finished, by final status.",
+    ["status"],
+)

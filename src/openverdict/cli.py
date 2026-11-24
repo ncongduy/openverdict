@@ -1,4 +1,4 @@
-"""`openverdict` command line: migrate the database and manage API keys."""
+"""`openverdict` command line: run the api or worker, migrate, manage API keys."""
 
 import argparse
 import asyncio
@@ -10,12 +10,14 @@ from openverdict.config import Settings
 from openverdict.logs import configure_logging
 from openverdict.models.api_keys import ApiKeyRepo, KeyNameTaken, Role
 from openverdict.models.db import create_engine, create_sessionmaker, run_migrations
+from openverdict.worker.main import run_worker
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="openverdict")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("api", help="run the HTTP API")
+    commands.add_parser("worker", help="run the job worker and feed sync")
     commands.add_parser("migrate", help="upgrade the database schema")
     create = commands.add_parser("create-key", help="create an API key and print it once")
     create.add_argument("--name", required=True)
@@ -67,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
                 log_config=None,
                 access_log=False,
             )
+            return 0
+        case "worker":
+            asyncio.run(run_worker(settings))
             return 0
         case "migrate":
             run_migrations(settings.database_url)
