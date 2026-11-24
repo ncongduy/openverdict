@@ -61,3 +61,13 @@ async def test_control_character_item_does_not_fail_batch(api, client_key):
     r = await api.post(URL, headers={"X-API-Key": client_key}, json={"urls": urls})
     assert r.status_code == 200
     assert [x["error"] for x in r.json()["results"]] == [None, "invalid_url"]
+
+
+async def test_chunked_body_over_limit_is_rejected_without_buffering(api):
+    # No Content-Length (chunked) and no API key: must still stop at the 25 MiB limit.
+    async def chunks():
+        for _ in range(27):
+            yield b"x" * (1024 * 1024)
+
+    r = await api.post(URL, headers={"Content-Type": "application/json"}, content=chunks())
+    assert r.status_code == 413
