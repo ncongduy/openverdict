@@ -1,0 +1,2 @@
+# openverdict demo feed: synthetic phishing links (reserved .test names)
+http://secure-login.test/verify

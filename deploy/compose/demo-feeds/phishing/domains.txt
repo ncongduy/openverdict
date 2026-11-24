@@ -1,0 +1,2 @@
+# openverdict demo feed: synthetic phishing domains (reserved .test names)
+phish-domain.test

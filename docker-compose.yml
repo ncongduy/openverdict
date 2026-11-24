@@ -1,0 +1,131 @@
+# openverdict local stack.
+#   Real feeds:  cp .env.example .env  (add your abuse.ch Auth-Key), then  docker compose up -d --build
+#   Demo:        docker compose --env-file deploy/compose/demo.env up -d --build
+# Ports bind to 127.0.0.1 only.
+
+x-openverdict-env: &openverdict-env
+  OPENVERDICT_DATABASE_URL: postgresql+asyncpg://openverdict:${POSTGRES_PASSWORD:-openverdict}@postgres:5432/openverdict
+  OPENVERDICT_VALKEY_URL: redis://valkey:6379/0
+  # Empty values fall back to the built-in defaults (the real feeds).
+  OPENVERDICT_URLHAUS_AUTH_KEY: ${OPENVERDICT_URLHAUS_AUTH_KEY:-}
+  OPENVERDICT_URLHAUS_URL: ${OPENVERDICT_URLHAUS_URL:-}
+  OPENVERDICT_PHISHING_DB_LINKS_URL: ${OPENVERDICT_PHISHING_DB_LINKS_URL:-}
+  OPENVERDICT_PHISHING_DB_DOMAINS_URL: ${OPENVERDICT_PHISHING_DB_DOMAINS_URL:-}
+  OPENVERDICT_TRANCO_URL: ${OPENVERDICT_TRANCO_URL:-}
+  OPENVERDICT_SAFE_BROWSING_ENABLED: ${OPENVERDICT_SAFE_BROWSING_ENABLED:-}
+  OPENVERDICT_SAFE_BROWSING_API_KEY: ${OPENVERDICT_SAFE_BROWSING_API_KEY:-}
+  OPENVERDICT_LOG_LEVEL: ${OPENVERDICT_LOG_LEVEL:-}
+  OPENVERDICT_JOB_RECLAIM_IDLE_SECONDS: ${OPENVERDICT_JOB_RECLAIM_IDLE_SECONDS:-}
+  OPENVERDICT_JOB_SWEEP_AFTER_SECONDS: ${OPENVERDICT_JOB_SWEEP_AFTER_SECONDS:-}
+
+x-openverdict-app: &openverdict-app
+  image: openverdict:local
+  build: .
+  environment: *openverdict-env
+  read_only: true
+  tmpfs: [/tmp]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  depends_on:
+    migrate:
+      condition: service_completed_successfully
+    valkey:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: openverdict
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-openverdict}
+      POSTGRES_DB: openverdict
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U openverdict -d openverdict"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  valkey:
+    image: valkey/valkey:9-alpine
+    command: ["valkey-server", "--appendonly", "yes"]
+    volumes:
+      - valkeydata:/data
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    image: openverdict:local
+    build: .
+    command: ["migrate"]
+    environment: *openverdict-env
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *openverdict-app
+    command: ["api"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/readyz', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    <<: *openverdict-app
+    command: ["worker"]
+    # Metrics on :9100 are scraped by Prometheus inside the compose network (not published:
+    # host port 9100 is usually taken by node_exporter).
+
+  prometheus:
+    image: prom/prometheus:v3.16.0
+    volumes:
+      - ./deploy/compose/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:13.3.1
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/openverdict.json
+    volumes:
+      - ./deploy/compose/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/compose/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+  demo-feeds:
+    image: nginx:1.31.10-alpine
+    profiles: ["demo"]
+    volumes:
+      - ./deploy/compose/demo-feeds:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  valkeydata:

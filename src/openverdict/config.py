@@ -7,7 +7,7 @@ AUTH_KEY_PLACEHOLDER = "{auth_key}"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="OPENVERDICT_")
+    model_config = SettingsConfigDict(env_prefix="OPENVERDICT_", env_ignore_empty=True)
 
     database_url: str = "postgresql+asyncpg://openverdict:openverdict@localhost:5432/openverdict"
     valkey_url: str = "redis://localhost:6379/0"
