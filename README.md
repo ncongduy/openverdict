@@ -142,7 +142,7 @@ and fragment removed) → analyst overrides → cache → all detectors in paral
 | `override` | safe, malicious | exact URL beats domain; a domain covers its subdomains; the most specific domain wins |
 | `urlhaus`, `phishing_db` | malicious, suspicious | exact URL listed → malicious. Only the host listed → suspicious, never malicious (feeds often list one URL on a shared or hacked host). Host-only matches on allowlisted or user-content hosts (Google Docs, GitHub Pages, S3, …) are ignored. |
 | `allowlist` | safe | host or a parent domain in the Tranco top list, unless it is a user-content host |
-| `heuristics` | suspicious | URL text only: IP-literal host, mixed scripts, punycode, `user@host` tricks, brand lookalikes (edit distance 1–2), brand + extra words, deep subdomains, very long URLs, risky TLDs. Weighted; suspicious at score ≥ 3. |
+| `heuristics` | suspicious | URL text only: IP-literal host, mixed scripts, punycode, `user@host` tricks, brand lookalikes in the registered name (edit distance 1, or 2 for brands longer than 6 letters), brand + extra words, deep subdomains, very long URLs, risky TLDs. Weighted; suspicious at score ≥ 3. |
 | `safe_browsing` | malicious | opt-in, see above |
 
 Combine rule: any `malicious` → malicious; else any `suspicious` → suspicious; else any `safe` →

@@ -44,3 +44,22 @@ async def test_detector():
     hit, low, clean = await d.check([normalize_url(u) for u in urls])
     assert hit == DetectorFinding("heuristics", Verdict.SUSPICIOUS, "ip_literal_host+3 (score 3)")
     assert low is None and clean is None
+
+
+@pytest.mark.parametrize(
+    "raw",
+    [
+        "https://cloud.google.com/",
+        "https://console.cloud.google.com/",
+        "https://cloud.digitalocean.com/",
+        "https://finance.yahoo.com/",
+        "https://www.amazing.com/",
+    ],
+)
+def test_no_brand_signal_on_common_legitimate_hosts(raw):
+    assert names(raw) == set()
+
+
+def test_lookalike_still_caught():
+    assert "brand_lookalike" in names("http://micros0ft.test/")
+    assert "brand_lookalike" in names("http://login.paypa1-secure.test/")

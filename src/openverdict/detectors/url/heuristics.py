@@ -74,18 +74,26 @@ def _edit_distance(a: str, b: str) -> int:
     return previous[-1]
 
 
+def _max_lookalike_distance(brand: str) -> int:
+    # Short brands are one edit away from ordinary words (amazon/amazing), so allow only 1.
+    return 1 if len(brand) <= 6 else 2
+
+
 def _brand_signals(labels: list[str], brands: Sequence[str]) -> list[Signal]:
     domain_label = labels[-2] if len(labels) >= 2 else labels[0]
     tokens = [token for label in labels[:-1] for token in label.split("-") if token]
+    # Lookalikes only count in the registered name: subdomains of a real site are chosen by
+    # that site (cloud.google.com is not an icloud lookalike).
+    domain_tokens = [token for token in domain_label.split("-") if token]
     lookalike = combo = False
     for brand in brands:
         if domain_label == brand:
             continue
-        for token in tokens:
-            if token == brand:
-                combo = True
-            elif len(token) >= 5 and 1 <= _edit_distance(token, brand) <= 2:
-                lookalike = True
+        combo = combo or brand in tokens
+        lookalike = lookalike or any(
+            len(token) >= 5 and 1 <= _edit_distance(token, brand) <= _max_lookalike_distance(brand)
+            for token in domain_tokens
+        )
     signals = []
     if lookalike:
         signals.append(Signal("brand_lookalike", 3))
